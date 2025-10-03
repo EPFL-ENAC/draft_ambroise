@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Frappe Gantt</title>
+  <script src="codebase/dhtmlxgantt.js"></script>
+  <link href="codebase/dhtmlxgantt.css" rel="stylesheet">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #gantt_here {
+      width: 100vw;
+      height: 100vh;
+      min-height: 100%;
+      box-sizing: border-box;
+    }
+    h1 {
+      display: none; /* Hide the h1 for full-page Gantt */
+    }
+    .gantt-btn {
+      position: absolute;
+      z-index: 10;
+      bottom: 20px;
+      left: 20px;
+      padding: 8px 18px;
+      background: #f4f4f4;
+      border: 1px solid #d4d4d4;
+      border-radius: 4px;
+      color: #444;
+      font-family: inherit;
+      font-size: 15px;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      transition: background 0.2s, border 0.2s;
+    }
+    .gantt-btn:hover {
+      background: #e9e9e9;
+      border-color: #bcbcbc;
+    }
+    .gantt_task_line{
+        background-color: #FF0000 !important;
+        border: 1px solid #b30000  !important; /* Default border color */
+    }
+    /* Only color tasks that have a parent */
+    .gantt_task_line.child-task {
+        background-color: #007480 !important; /* Child: light blue */
+        border: 1px solid #0288d1 !important;
+    }
+  </style>
+</head>
+<body>
+    <div id="gantt_here"></div>
+    <script type="text/javascript">
+        gantt.config.xml_date = "%Y-%m-%d %H:%i";
+
+        // Color only tasks that have a parent
+        gantt.templates.task_class = function(start, end, task){
+            if(task.parent && task.parent != 0){
+                return "child-task";
+            }
+            return "";
+        };
+
+        // Lightbox config
+        gantt.config.lightbox.sections = [
+            {name:"name", height:30, map_to:"text", type:"textarea", focus:true},
+            {name:"description", height:70, map_to:"description", type:"textarea", focus:true},
+            {name:"complexity", height:30, map_to:"complexity", type:"select", options:[
+                {key: 1, label: "1 (Low)"},
+                {key: 2, label: "2"},
+                {key: 3, label: "3"},
+                {key: 4, label: "4"},
+                {key: 5, label: "5 (High)"}
+            ]},
+            {name:"time", type:"duration", map_to:"auto"}
+        ];
+
+        // Set main scale to week and top scale to month
+        gantt.config.scale_unit = "week";
+        gantt.config.date_scale = "%m-%d";
+        gantt.config.subscales = [
+            {unit: "month", step: 1, date: "%F %Y"}
+        ];
+        gantt.config.scale_height = 80; // Adjust for better visibility
+        // Add columns: text, duration (weeks), complexity, progress
+        gantt.config.columns = [
+            {name:"text",       label:"name",  width:"*", tree:true },
+            {name:"duration_weeks", label:"Durée (semaines)", align:"center", width:120, template:function(obj){
+                return Math.round(obj.duration/7);
+            },},
+            {name:"complexity", label:"Complexité", align:"center", width:100, template:function(obj){
+                return obj.complexity || "";
+            }},
+            {name:"add", label:"", width:44 }
+        ];
+        
+        gantt.config.order_branch = true; // Allow moving tasks within the same parent
+        gantt.config.order_branch_free = true; // Allow moving tasks between parents
+
+        // --- Undo stack ---
+        let undoStack = [];
+
+        function pushUndo() {
+            undoStack.push(JSON.stringify(gantt.serialize()));
+            if (undoStack.length > 50) undoStack.shift(); // Limit stack size
+        }
+
+        function undoGantt() {
+            if (undoStack.length > 1) {
+                undoStack.pop(); // Remove current state
+                const prev = undoStack[undoStack.length - 1];
+                gantt.clearAll();
+                gantt.parse(JSON.parse(prev));
+            }
+        }
+
+        // Track changes for undo
+        gantt.attachEvent("onAfterTaskAdd", pushUndo);
+        gantt.attachEvent("onAfterTaskUpdate", pushUndo);
+        gantt.attachEvent("onAfterTaskDelete", pushUndo);
+        gantt.attachEvent("onRowDragEnd", pushUndo);
+
+        gantt.init("gantt_here");
+
+        var tasks = {
+            data: [
+                // Sprints (parents)
+                {id: 1, text: "Sprint 1", start_date: "2025-10-27 00:00", duration: 22, progress: 0.6, complexity: 1},
+                {id: 2, text: "Sprint 2", start_date: "2025-11-17 00:00", duration: 15, progress: 0.4},
+                {id: 3, text: "Sprint 3", start_date: "2025-12-01 00:00", duration: 13, progress: 0.8},
+                {id: 4, text: "Sprint 4", start_date: "2026-01-05 00:00", duration: 15, progress: 0.2},
+                {id: 5, text: "Sprint 5", start_date: "2026-01-19 00:00", duration: 23, progress: 0.5},
+                {id: 6, text: "Sprint 6", start_date: "2026-02-10 00:00", duration: 21, progress: 0.7},
+                {id: 7, text: "Sprint 7", start_date: "2026-03-02 00:00", duration: 15, progress: 0.3},
+                {id: 8, text: "Sprint 8", start_date: "2026-03-16 00:00", duration: 15, progress: 0.9},
+                {id: 9, text: "Sprint 9", start_date: "2026-03-30 00:00", duration: 15, progress: 0.1},
+                {id: 10, text: "Sprint 10", start_date: "2026-04-13 00:00", duration: 15, progress: 0.4},
+
+                // Sprint 1 Feats
+                {id: 101, text: "Définition d'un mini design system", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+                {id: 102, text: "module mon labo", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+                {id: 103, text: "module déplacement pro", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+                {id: 104, text: "Calcul CO2-eq en temps réel", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+                {id: 105, text: "Import CSV manuel", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+                {id: 106, text: "Intégration des premiers facteurs d'émission (transport)", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+                {id: 107, text: "data Métier espace", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+                {id: 108, text: "AUTH", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+
+                // Sprint 2 Feats
+                {id: 201, text: "Module Infrastucture", parent: 2, start_date: "2025-11-17 00:00", duration: 15},
+                {id: 202, text: "Sous-module émissions directes (optionnel)", parent: 2, start_date: "2025-11-17 00:00", duration: 15},
+                {id: 203, text: "Navigation inter-modules", parent: 2, start_date: "2025-11-17 00:00", duration: 15},
+
+                // Sprint 3 Feats
+                {id: 301, text: "Module consommation électrique équipements", parent: 3, start_date: "2025-12-01 00:00", duration: 13},
+                {id: 302, text: "Calcul CO2-eq par équipement", parent: 3, start_date: "2025-12-01 00:00", duration: 13},
+                {id: 303, text: "Visualisation améliorée", parent: 3, start_date: "2025-12-01 00:00", duration: 13},
+                {id: 304, text: "Messages d'erreur et validations", parent: 3, start_date: "2025-12-01 00:00", duration: 13},
+
+                // Sprint 4 Feats
+                {id: 401, text: "Module achats", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
+                {id: 402, text: "Export des résultats", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
+
+                // Sprint 5 Feats
+                {id: 501, text: "Module services Interne", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
+                {id: 502, text: "Module Impact des services cloud (optionel)", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
+                {id: 503, text: "Améliorations UX", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
+                {id: 504, text: "Déchets (optionel)", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
+                {id: 505, text: "Alimentation et pendularité (optionel)", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
+                {id: 506, text: "Energie grise (optionel)", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
+
+                // Sprint 6 Feats
+                {id: 601, text: "Interface IT", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
+                {id: 602, text: "Interface Métier complet", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
+                {id: 603, text: "Interface Métier restreint", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
+                {id: 604, text: "Documentation", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
+                {id: 605, text: "Journalisation", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
+
+                // Sprint 7 Feats
+                {id: 701, text: "Connexion via MS Entra ID (OIDC/SAML2)", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
+                {id: 702, text: "Mapping des rôles avec Accred", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
+                {id: 703, text: "Gestion des rôles (5 types)", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
+                {id: 704, text: "Sécurité d'accès (groupes, permissions)", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
+                {id: 705, text: "Page d'accueil minimaliste", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
+
+                // Sprint 8 Feats
+                {id: 801, text: "Simulation de projet (optionnel)", parent: 8, start_date: "2026-03-16 00:00", duration: 15},
+                {id: 802, text: "Comparaison temporelle", parent: 8, start_date: "2026-03-16 00:00", duration: 15},
+
+                // Sprint 9 Feats
+                {id: 901, text: "API REST sécurisée (lecture)", parent: 9, start_date: "2026-03-30 00:00", duration: 15},
+                {id: 902, text: "Documentation Swagger/OpenAPI", parent: 9, start_date: "2026-03-30 00:00", duration: 15},
+                {id: 903, text: "Ingestion automatique CSV (optionnel)", parent: 9, start_date: "2026-03-30 00:00", duration: 15},
+                {id: 904, text: "Données additionnelles (optionnel)", parent: 9, start_date: "2026-03-30 00:00", duration: 15},
+
+                // Sprint 10 Feats
+                {id: 1001, text: "Intégration des retours utilisateurs", parent: 10, start_date: "2026-04-13 00:00", duration: 15},
+                {id: 1002, text: "Ajustements UX/UI", parent: 10, start_date: "2026-04-13 00:00", duration: 15},
+                {id: 1003, text: "Corrections mineures", parent: 10, start_date: "2026-04-13 00:00", duration: 15},
+                {id: 1004, text: "Préparation à la mise en production", parent: 10, start_date: "2026-04-13 00:00", duration: 15}
+            ],
+            links:[
+                // Links between each sprint and its children
+                {id: 1001, source: 1, target: 101, type: "1"},
+                {id: 1002, source: 1, target: 102, type: "1"},
+                {id: 1003, source: 1, target: 103, type: "1"},
+                {id: 1004, source: 1, target: 104, type: "1"},
+                {id: 1005, source: 1, target: 105, type: "1"},
+                {id: 1006, source: 1, target: 106, type: "1"},
+                {id: 1007, source: 1, target: 107, type: "1"},
+                {id: 1008, source: 1, target: 108, type: "1"},
+
+                {id: 2001, source: 2, target: 201, type: "1"},
+                {id: 2002, source: 2, target: 202, type: "1"},
+                {id: 2003, source: 2, target: 203, type: "1"},
+
+                {id: 3001, source: 3, target: 301, type: "1"},
+                {id: 3002, source: 3, target: 302, type: "1"},
+                {id: 3003, source: 3, target: 303, type: "1"},
+                {id: 3004, source: 3, target: 304, type: "1"},
+
+                {id: 4001, source: 4, target: 401, type: "1"},
+                {id: 4002, source: 4, target: 402, type: "1"},
+
+                {id: 5001, source: 5, target: 501, type: "1"},
+                {id: 5002, source: 5, target: 502, type: "1"},
+                {id: 5003, source: 5, target: 503, type: "1"},
+                {id: 5004, source: 5, target: 504, type: "1"},
+                {id: 5005, source: 5, target: 505, type: "1"},
+                {id: 5006, source: 5, target: 506, type: "1"},
+
+                {id: 6001, source: 6, target: 601, type: "1"},
+                {id: 6002, source: 6, target: 602, type: "1"},
+                {id: 6003, source: 6, target: 603, type: "1"},
+                {id: 6004, source: 6, target: 604, type: "1"},
+                {id: 6005, source: 6, target: 605, type: "1"},
+
+                {id: 7001, source: 7, target: 701, type: "1"},
+                {id: 7002, source: 7, target: 702, type: "1"},
+                {id: 7003, source: 7, target: 703, type: "1"},
+                {id: 7004, source: 7, target: 704, type: "1"},
+                {id: 7005, source: 7, target: 705, type: "1"},
+
+                {id: 8001, source: 8, target: 801, type: "1"},
+                {id: 8002, source: 8, target: 802, type: "1"},
+
+                {id: 9001, source: 9, target: 901, type: "1"},
+                {id: 9002, source: 9, target: 902, type: "1"},
+                {id: 9003, source: 9, target: 903, type: "1"},
+                {id: 9004, source: 9, target: 904, type: "1"},
+
+                {id: 10001, source: 10, target: 1001, type: "1"},
+                {id: 10002, source: 10, target: 1002, type: "1"},
+                {id: 10003, source: 10, target: 1003, type: "1"},
+                {id: 10004, source: 10, target: 1004, type: "1"}
+            ]
+        };
+        gantt.parse(tasks);
+
+        
+
+        window.addEventListener("resize", function() {
+            gantt.setSizes();
+        });
+
+        function toggleGrid() {
+                gantt.config.show_grid = !gantt.config.show_grid;
+                gantt.render();
+            }
+    </script>
+    <button class="gantt-btn" onclick="toggleGrid()">Afficher/Masquer la grille</button>
+    <button class="gantt-btn" style="left:auto; right:20px;" onclick="undoGantt()">Annuler</button>
+    <script type="text/javascript">
+        // --- Undo stack ---
+        let undoStack = [];
+
+        function pushUndo() {
+            undoStack.push(JSON.stringify(gantt.serialize()));
+            if (undoStack.length > 50) undoStack.shift(); // Limit stack size
+        }
+
+        function undoGantt() {
+            if (undoStack.length > 1) {
+                undoStack.pop(); // Remove current state
+                const prev = undoStack[undoStack.length - 1];
+                gantt.clearAll();
+                gantt.parse(JSON.parse(prev));
+            }
+        }
+
+        // Track changes for undo
+        gantt.attachEvent("onAfterTaskAdd", pushUndo);
+        gantt.attachEvent("onAfterTaskUpdate", pushUndo);
+        gantt.attachEvent("onAfterTaskDelete", pushUndo);
+        gantt.attachEvent("onRowDragEnd", pushUndo);
+        gantt.attachEvent("onAfterLinkAdd", pushUndo);
+        gantt.attachEvent("onAfterLinkUpdate", pushUndo);
+        gantt.attachEvent("onAfterLinkDelete", pushUndo);
+
+        // Initialize and push initial state
+        gantt.init("gantt_here");
+        gantt.parse(tasks);
+        pushUndo();
+    </script>
+</body>
+</html>
