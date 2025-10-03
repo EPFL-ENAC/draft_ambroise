@@ -1,0 +1,133 @@
+Table users {
+  id int [pk, increment]
+  email varchar
+  password varchar
+}
+
+Table laboratories {
+  id int [pk, increment]
+  name varchar
+  referent varchar
+  number int
+  /* link to a user (owner/admin) - diagram shows a relation between user and laboratory */
+  user_id int
+}
+
+Table ghginventory {
+  id int [pk, increment]
+  laboratory int          // FK -> laboratories.id
+  year int
+  created timestamp
+  nb_researcher int
+  nb_teacher int
+  nb_engineer int
+  nb_student int
+  budget int
+  submitted boolean
+}
+
+Table building {
+  id int [pk, increment]
+  electricity int
+  heating int
+  ghgi int                 // FK -> ghginventory.id
+  name varchar
+  site varchar
+  floor_area float
+  useful_area float
+  owned_by_lab boolean
+  electric_heating boolean
+  heating_type varchar
+  district_network varchar
+  self_production boolean
+  self_consumption integer
+
+  laboratory int            // FK -> laboratories.id
+}
+
+Table refrigerant {
+  id int [pk, increment]
+  building int              // FK -> building.id
+  ghgi int                  // FK -> ghginventory.id
+  name varchar
+  consumption float
+}
+
+Table consumption {
+  id int [pk, increment]
+  electricity int
+  heating int
+  vehicle int
+  ghgi int                  // FK -> ghginventory.id
+}
+
+Table vehicle {
+  id int [pk, increment]
+  ghgi int                  // FK -> ghginventory.id
+  name varchar
+  type varchar
+  engine varchar
+  unit varchar
+  power int
+  nb_engine int
+  shp int
+  operational_control boolean
+}
+
+Table device {
+  id int [pk, increment]
+  ghgi int                  // FK -> ghginventory.id
+  type varchar
+  model varchar
+  amount int
+  acquisitionYear int
+}
+
+Table travel {
+  id int [pk, increment]
+  ghgi int                  // FK -> ghginventory.id
+  distance float
+  mode varchar
+  purpose varchar
+  status varchar
+  round_trip boolean
+  amount int
+}
+
+Table commute {
+  id int [pk, increment]
+  ghgi int                  // FK -> ghginventory.id
+  status varchar
+  commuting_days int
+  walking_distance int
+  bike_distance int
+  ebike_distance int
+  escooter_distance int
+  two_wheeler_distance int
+  car_distance int
+  bus_distance int
+  tramway_distance int
+  train_distance int
+  rer_distance int
+  subway_distance int
+  carpooling int
+  wheelerpooling int
+  car_engine varchar
+}
+
+//// Relationships (foreign keys)
+Ref: laboratories.user_id > users.id
+Ref: ghginventory.laboratory > laboratories.id
+
+Ref: building.laboratory > laboratories.id
+Ref: building.ghgi > ghginventory.id
+
+Ref: refrigerant.building > building.id
+Ref: refrigerant.ghgi > ghginventory.id
+
+Ref: consumption.ghgi > ghginventory.id
+
+Ref: vehicle.ghgi > ghginventory.id
+Ref: device.ghgi > ghginventory.id
+Ref: travel.ghgi > ghginventory.id
+Ref: commute.ghgi > ghginventory.id
