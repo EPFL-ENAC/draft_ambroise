@@ -1,4 +1,4 @@
-Table users {
+TTable users {
   id int [pk, increment]
   email varchar
   password varchar
@@ -100,6 +100,41 @@ Table submodule_achat_transport{
   travel_distance int
 
 }
+
+Table submodule_achat_autres{
+  id int [pk, increment]
+  name varchar
+  ghgi int
+  unit varchar
+  amount int
+  transport_mode varchar
+  travel_distance int
+
+}
+
+Table module_intern_services{
+  id int [pk, increment]
+  ghgi int                 
+  centre_id varchar
+  service_name varchar
+}
+
+Table centre_intern_services{
+  id int [pk, increment]              
+  category_id varchar
+  sub_category_id varchar
+  service_name varchar
+}
+
+Table module_impact_cloud{
+  id int [pk, increment]              
+  ghgi int
+  category varchar
+  expense int
+  service_name varchar
+}
+
+
 //// Relationships (foreign keys)
 Ref: laboratories.referent > users.id
 Ref: lab_ghginventory.laboratory > laboratories.id
@@ -112,7 +147,11 @@ Ref: module_infrastructur.id > sub_module_building_direct_emission.building_id
 
 Ref: module_achat_article.ghgi > lab_ghginventory.id
 
-
+Ref: submodule_achat_autres.ghgi > lab_ghginventory.id
 
 Ref: module_travel.ghgi > lab_ghginventory.id
 
+Ref: module_intern_services.centre_id > centre_intern_services.id
+Ref: module_intern_services.ghgi > lab_ghginventory.id
+
+Ref: module_impact_cloud.ghgi > lab_ghginventory.id
