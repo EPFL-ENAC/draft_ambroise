@@ -1,7 +1,3 @@
-// Use DBML to define your database structure
-// Docs: https://dbml.dbdiagram.io/docs
-// ER schema based on the provided image
-
 Table users {
   id int [pk, increment]
   email varchar
@@ -40,17 +36,15 @@ Table module_infrastructur {
   ventilation float
   light float
   ghgi int   
-  direct_emission int             // FK -> ghginventory.id
-          // FK -> laboratories.id
+            
 }
 
 Table sub_module_building_direct_emission {
   id int [pk, increment]
+  building_id int
   unit varchar
   amount float
-  heating_type float
-  ghgi int                 // FK -> ghginventory.id
-          // FK -> laboratories.id
+  heating_type float            
 }
 
 
@@ -98,17 +92,27 @@ Table module_achat_article{
   code_centre_de_cout varchar
   supplier varchar
 }
+
+Table submodule_achat_transport{
+  id int [pk, increment]
+  article_id int                  // FK -> ghginventory.id
+  transport_mode varchar
+  travel_distance int
+
+}
 //// Relationships (foreign keys)
 Ref: laboratories.referent > users.id
 Ref: lab_ghginventory.laboratory > laboratories.id
 
+Ref: module_achat_article.id > submodule_achat_transport.article_id
 Ref: module_electric_consumption_equipment.ghgi > lab_ghginventory.id
 
 Ref: module_infrastructur.ghgi > lab_ghginventory.id
-Ref: module_infrastructur.direct_emission > sub_module_building_direct_emission.ghgi
+Ref: module_infrastructur.id > sub_module_building_direct_emission.building_id
 
-
+Ref: module_achat_article.ghgi > lab_ghginventory.id
 
 
 
 Ref: module_travel.ghgi > lab_ghginventory.id
+
