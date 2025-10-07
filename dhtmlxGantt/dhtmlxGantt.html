@@ -50,6 +50,11 @@
         background-color: #007480 !important; /* Child: light blue */
         border: 1px solid #0288d1 !important;
     }
+    /* Add a specific style for "[Specs]" tasks */
+    .gantt_task_line.specs-task {
+        background-color: #FFD700 !important; /* Gold background */
+        border: 1px solid #DAA520 !important; /* Darker gold border */
+    }
   </style>
 </head>
 <body>
@@ -57,10 +62,13 @@
     <script type="text/javascript">
         gantt.config.xml_date = "%Y-%m-%d %H:%i";
 
-        // Color only tasks that have a parent
+        // Color only tasks that have a parent or contain "[Specs]"
         gantt.templates.task_class = function(start, end, task){
-            if(task.parent && task.parent != 0){
-                return "child-task";
+            if (task.text.includes("[Specs]")) {
+                return "specs-task"; // Add a specific class for "[Specs]" tasks
+            }
+            if (task.parent && task.parent != 0) {
+                return "child-task"; // Default child task class
             }
             return "";
         };
@@ -86,9 +94,10 @@
             {unit: "month", step: 1, date: "%F %Y"}
         ];
         gantt.config.scale_height = 80; // Adjust for better visibility
+
         // Add columns: text, duration (weeks), complexity, progress
         gantt.config.columns = [
-            {name:"text",       label:"name",  width:"*", tree:true },
+            {name:"text", label:"name", width:"*", tree:true },
             {name:"duration_weeks", label:"Durée (semaines)", align:"center", width:120, template:function(obj){
                 return Math.round(obj.duration/7);
             },},
@@ -97,7 +106,7 @@
             }},
             {name:"add", label:"", width:44 }
         ];
-        
+
         gantt.config.order_branch = true; // Allow moving tasks within the same parent
         gantt.config.order_branch_free = true; // Allow moving tasks between parents
 
@@ -129,134 +138,132 @@
         var tasks = {
             data: [
                 // Sprints (parents)
-                {id: 1, text: "Sprint 1", start_date: "2025-10-27 00:00", duration: 22, progress: 0.6, complexity: 1},
-                {id: 2, text: "Sprint 2", start_date: "2025-11-17 00:00", duration: 15, progress: 0.4},
-                {id: 3, text: "Sprint 3", start_date: "2025-12-01 00:00", duration: 13, progress: 0.8},
+                {id: 1, text: "Sprint 1", start_date: "2025-10-27 00:00", duration: 21, progress: 0.6, complexity: 1},
+                {id: 2, text: "Sprint 2", start_date: "2025-11-18 00:00", duration: 24, progress: 0.4},
+                {id: 3, text: "Sprint 3", start_date: "2025-12-12 00:00", duration: 14, progress: 0.8},
                 {id: 4, text: "Sprint 4", start_date: "2026-01-05 00:00", duration: 15, progress: 0.2},
-                {id: 5, text: "Sprint 5", start_date: "2026-01-19 00:00", duration: 23, progress: 0.5},
-                {id: 6, text: "Sprint 6", start_date: "2026-02-10 00:00", duration: 21, progress: 0.7},
-                {id: 7, text: "Sprint 7", start_date: "2026-03-02 00:00", duration: 15, progress: 0.3},
-                {id: 8, text: "Sprint 8", start_date: "2026-03-16 00:00", duration: 15, progress: 0.9},
-                {id: 9, text: "Sprint 9", start_date: "2026-03-30 00:00", duration: 15, progress: 0.1},
-                {id: 10, text: "Sprint 10", start_date: "2026-04-13 00:00", duration: 15, progress: 0.4},
+                {id: 5, text: "Sprint 5", start_date: "2026-01-20 00:00", duration: 22, progress: 0.5},
+                {id: 6, text: "Sprint 6", start_date: "2026-02-11 00:00", duration: 20, progress: 0.7},
+                {id: 7, text: "Sprint 7", start_date: "2026-03-03 00:00", duration: 15, progress: 0.3},
+                {id: 8, text: "Sprint 8", start_date: "2026-03-18 00:00", duration: 15, progress: 0.9},
+                {id: 9, text: "Sprint 9", start_date: "2026-04-02 00:00", duration: 19, progress: 0.1},
+                {id: 10, text: "Sprint 10", start_date: "2026-04-21 00:00", duration: 28, progress: 0.4},
 
                 // Sprint 1 Feats
-                {id: 101, text: "Définition d'un mini design system", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
-                {id: 102, text: "module mon labo", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
-                {id: 103, text: "module déplacement pro", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
-                {id: 104, text: "Calcul CO2-eq en temps réel", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
-                {id: 105, text: "Import CSV manuel", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
-                {id: 106, text: "Intégration des premiers facteurs d'émission (transport)", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
-                {id: 107, text: "data Métier espace", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
-                {id: 108, text: "AUTH", parent: 1, start_date: "2025-10-27 00:00", duration: 22},
+                {id: 109, text: "Page d'accueil minimaliste", parent: 1, start_date: "2025-10-27 00:00", duration: 21},
+                {id: 110, text: "Module mon labo", parent: 1, start_date: "2025-10-27 00:00", duration: 21},
+                {id: 111, text: "Module déplacement pro", parent: 1, start_date: "2025-10-27 00:00", duration: 21},
+                {id: 112, text: "[Specs] Validation specs S2: Module Infrastructure", parent: 1, start_date: "2025-10-27 00:00", duration: 21},
 
                 // Sprint 2 Feats
-                {id: 201, text: "Module Infrastucture", parent: 2, start_date: "2025-11-17 00:00", duration: 15},
-                {id: 202, text: "Sous-module émissions directes (optionnel)", parent: 2, start_date: "2025-11-17 00:00", duration: 15},
-                {id: 203, text: "Navigation inter-modules", parent: 2, start_date: "2025-11-17 00:00", duration: 15},
+                {id: 201, text: "Module Infrastructure", parent: 2, start_date: "2025-11-18 00:00", duration: 24},
+                {id: 202, text: "Navigation inter-modules (placeholders de toute l'architecture)", parent: 2, start_date: "2025-11-18 00:00", duration: 24},
+                {id: 203, text: "Améliorations UX", parent: 2, start_date: "2025-11-18 00:00", duration: 24},
+                {id: 204, text: "[Specs] Modules consomation électrique équipements / Achats", parent: 2, start_date: "2025-11-18 00:00", duration: 24},
 
                 // Sprint 3 Feats
-                {id: 301, text: "Module consommation électrique équipements", parent: 3, start_date: "2025-12-01 00:00", duration: 13},
-                {id: 302, text: "Calcul CO2-eq par équipement", parent: 3, start_date: "2025-12-01 00:00", duration: 13},
-                {id: 303, text: "Visualisation améliorée", parent: 3, start_date: "2025-12-01 00:00", duration: 13},
-                {id: 304, text: "Messages d'erreur et validations", parent: 3, start_date: "2025-12-01 00:00", duration: 13},
+                {id: 301, text: "Module consommation électrique équipements", parent: 3, start_date: "2025-12-12 00:00", duration: 14},
+                {id: 302, text: "Visualisation des résultats", parent: 3, start_date: "2025-12-12 00:00", duration: 14},
+                {id: 303, text: "Export des résultats", parent: 3, start_date: "2025-12-12 00:00", duration: 14},
+                {id: 304, text: "[Specs] Modules achats", parent: 3, start_date: "2025-12-12 00:00", duration: 14},
 
                 // Sprint 4 Feats
-                {id: 401, text: "Module achats", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
-                {id: 402, text: "Export des résultats", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
+                {id: 401, text: "Auth : Gestion des rôles (5 types) & Mapping des rôles avec Accred & Sécurité d'accès", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
+                {id: 402, text: "Journalisation / logs", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
+                {id: 403, text: "Module achats (1/2)", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
+                {id: 404, text: "[Specs] Module Achat / service interne", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
 
                 // Sprint 5 Feats
-                {id: 501, text: "Module services Interne", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
-                {id: 502, text: "Module Impact des services cloud (optionel)", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
-                {id: 503, text: "Améliorations UX", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
-                {id: 504, text: "Déchets (optionel)", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
-                {id: 505, text: "Alimentation et pendularité (optionel)", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
-                {id: 506, text: "Energie grise (optionel)", parent: 5, start_date: "2026-01-19 00:00", duration: 23},
+                {id: 501, text: "Module achats (2/2)", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
+                {id: 502, text: "Comparaison temporelle", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
+                {id: 503, text: "Documentation user help", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
+                {id: 504, text: "Ingestion automatique CSV (optionnel)", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
+                {id: 505, text: "[Specs] Module services interne", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
 
                 // Sprint 6 Feats
-                {id: 601, text: "Interface IT", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
-                {id: 602, text: "Interface Métier complet", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
-                {id: 603, text: "Interface Métier restreint", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
-                {id: 604, text: "Documentation", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
-                {id: 605, text: "Journalisation", parent: 6, start_date: "2026-02-10 00:00", duration: 21},
+                {id: 601, text: "Module services Interne", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
+                {id: 602, text: "Métier complet/restreint", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
+                {id: 603, text: "Messages d'erreur et validations", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
+                {id: 604, text: "Interface IT", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
+                {id: 605, text: "[Specs] Alimentation et énergie grise / module service cloud", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
 
                 // Sprint 7 Feats
-                {id: 701, text: "Connexion via MS Entra ID (OIDC/SAML2)", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
-                {id: 702, text: "Mapping des rôles avec Accred", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
-                {id: 703, text: "Gestion des rôles (5 types)", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
-                {id: 704, text: "Sécurité d'accès (groupes, permissions)", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
-                {id: 705, text: "Page d'accueil minimaliste", parent: 7, start_date: "2026-03-02 00:00", duration: 15},
+                {id: 701, text: "Alimentation et pendularité (optionel)", parent: 7, start_date: "2026-03-03 00:00", duration: 15},
+                {id: 702, text: "Energie grise (optionel)", parent: 7, start_date: "2026-03-03 00:00", duration: 15},
+                {id: 703, text: "[Specs] Module service cloud / Déchets / Simulation de projet", parent: 7, start_date: "2026-03-03 00:00", duration: 15},
 
                 // Sprint 8 Feats
-                {id: 801, text: "Simulation de projet (optionnel)", parent: 8, start_date: "2026-03-16 00:00", duration: 15},
-                {id: 802, text: "Comparaison temporelle", parent: 8, start_date: "2026-03-16 00:00", duration: 15},
+                {id: 801, text: "Module Impact des services cloud (optionel)", parent: 8, start_date: "2026-03-18 00:00", duration: 15},
+                {id: 802, text: "Déchets (optionel)", parent: 8, start_date: "2026-03-18 00:00", duration: 15},
+                {id: 803, text: "[Specs] Simulation de projet", parent: 8, start_date: "2026-03-18 00:00", duration: 15},
 
                 // Sprint 9 Feats
-                {id: 901, text: "API REST sécurisée (lecture)", parent: 9, start_date: "2026-03-30 00:00", duration: 15},
-                {id: 902, text: "Documentation Swagger/OpenAPI", parent: 9, start_date: "2026-03-30 00:00", duration: 15},
-                {id: 903, text: "Ingestion automatique CSV (optionnel)", parent: 9, start_date: "2026-03-30 00:00", duration: 15},
-                {id: 904, text: "Données additionnelles (optionnel)", parent: 9, start_date: "2026-03-30 00:00", duration: 15},
+                {id: 901, text: "Simulation de projet (optionnel)", parent: 9, start_date: "2026-04-02 00:00", duration: 19},
+                {id: 902, text: "API REST sécurisée (lecture)", parent: 9, start_date: "2026-04-02 00:00", duration: 19},
+                {id: 903, text: "Documentation Swagger/OpenAPI", parent: 9, start_date: "2026-04-02 00:00", duration: 19},
+                {id: 904, text: "[Specs] Retour", parent: 9, start_date: "2026-04-02 00:00", duration: 19},
+
 
                 // Sprint 10 Feats
-                {id: 1001, text: "Intégration des retours utilisateurs", parent: 10, start_date: "2026-04-13 00:00", duration: 15},
-                {id: 1002, text: "Ajustements UX/UI", parent: 10, start_date: "2026-04-13 00:00", duration: 15},
-                {id: 1003, text: "Corrections mineures", parent: 10, start_date: "2026-04-13 00:00", duration: 15},
-                {id: 1004, text: "Préparation à la mise en production", parent: 10, start_date: "2026-04-13 00:00", duration: 15}
+                {id: 1001, text: "Intégration des retours", parent: 10, start_date: "2026-04-21 00:00", duration: 28}
             ],
-            links:[
-                // Links between each sprint and its children
-                {id: 1001, source: 1, target: 101, type: "1"},
-                {id: 1002, source: 1, target: 102, type: "1"},
-                {id: 1003, source: 1, target: 103, type: "1"},
-                {id: 1004, source: 1, target: 104, type: "1"},
-                {id: 1005, source: 1, target: 105, type: "1"},
-                {id: 1006, source: 1, target: 106, type: "1"},
-                {id: 1007, source: 1, target: 107, type: "1"},
-                {id: 1008, source: 1, target: 108, type: "1"},
+            links: [
+                // Links for Sprint 1
+                {id: 1, source: 1, target: 109, type: "1"},
+                {id: 2, source: 1, target: 110, type: "1"},
+                {id: 3, source: 1, target: 111, type: "1"},
+                {id: 4, source: 1, target: 112, type: "1"},
 
-                {id: 2001, source: 2, target: 201, type: "1"},
-                {id: 2002, source: 2, target: 202, type: "1"},
-                {id: 2003, source: 2, target: 203, type: "1"},
+                // Links for Sprint 2
+                {id: 5, source: 2, target: 201, type: "1"},
+                {id: 6, source: 2, target: 202, type: "1"},
+                {id: 7, source: 2, target: 203, type: "1"},
+                {id: 8, source: 2, target: 204, type: "1"},
 
-                {id: 3001, source: 3, target: 301, type: "1"},
-                {id: 3002, source: 3, target: 302, type: "1"},
-                {id: 3003, source: 3, target: 303, type: "1"},
-                {id: 3004, source: 3, target: 304, type: "1"},
+                // Links for Sprint 3
+                {id: 9, source: 3, target: 301, type: "1"},
+                {id: 10, source: 3, target: 302, type: "1"},
+                {id: 11, source: 3, target: 303, type: "1"},
+                {id: 12, source: 3, target: 304, type: "1"},
 
-                {id: 4001, source: 4, target: 401, type: "1"},
-                {id: 4002, source: 4, target: 402, type: "1"},
+                // Links for Sprint 4
+                {id: 13, source: 4, target: 401, type: "1"},
+                {id: 14, source: 4, target: 402, type: "1"},
+                {id: 15, source: 4, target: 403, type: "1"},
+                {id: 16, source: 4, target: 404, type: "1"},
 
-                {id: 5001, source: 5, target: 501, type: "1"},
-                {id: 5002, source: 5, target: 502, type: "1"},
-                {id: 5003, source: 5, target: 503, type: "1"},
-                {id: 5004, source: 5, target: 504, type: "1"},
-                {id: 5005, source: 5, target: 505, type: "1"},
-                {id: 5006, source: 5, target: 506, type: "1"},
+                // Links for Sprint 5
+                {id: 17, source: 5, target: 501, type: "1"},
+                {id: 18, source: 5, target: 502, type: "1"},
+                {id: 19, source: 5, target: 503, type: "1"},
+                {id: 20, source: 5, target: 504, type: "1"},
+                {id: 21, source: 5, target: 505, type: "1"},
 
-                {id: 6001, source: 6, target: 601, type: "1"},
-                {id: 6002, source: 6, target: 602, type: "1"},
-                {id: 6003, source: 6, target: 603, type: "1"},
-                {id: 6004, source: 6, target: 604, type: "1"},
-                {id: 6005, source: 6, target: 605, type: "1"},
+                // Links for Sprint 6
+                {id: 22, source: 6, target: 601, type: "1"},
+                {id: 23, source: 6, target: 602, type: "1"},
+                {id: 24, source: 6, target: 603, type: "1"},
+                {id: 25, source: 6, target: 604, type: "1"},
+                {id: 26, source: 6, target: 605, type: "1"},
 
-                {id: 7001, source: 7, target: 701, type: "1"},
-                {id: 7002, source: 7, target: 702, type: "1"},
-                {id: 7003, source: 7, target: 703, type: "1"},
-                {id: 7004, source: 7, target: 704, type: "1"},
-                {id: 7005, source: 7, target: 705, type: "1"},
+                // Links for Sprint 7
+                {id: 27, source: 7, target: 701, type: "1"},
+                {id: 28, source: 7, target: 702, type: "1"},
+                {id: 29, source: 7, target: 703, type: "1"},
 
-                {id: 8001, source: 8, target: 801, type: "1"},
-                {id: 8002, source: 8, target: 802, type: "1"},
+                // Links for Sprint 8
+                {id: 30, source: 8, target: 801, type: "1"},
+                {id: 31, source: 8, target: 802, type: "1"},
+                {id: 32, source: 8, target: 803, type: "1"},
 
-                {id: 9001, source: 9, target: 901, type: "1"},
-                {id: 9002, source: 9, target: 902, type: "1"},
-                {id: 9003, source: 9, target: 903, type: "1"},
-                {id: 9004, source: 9, target: 904, type: "1"},
+                // Links for Sprint 9
+                {id: 33, source: 9, target: 901, type: "1"},
+                {id: 34, source: 9, target: 902, type: "1"},
+                {id: 35, source: 9, target: 903, type: "1"},
+                {id: 36, source: 9, target: 904, type: "1"},
 
-                {id: 10001, source: 10, target: 1001, type: "1"},
-                {id: 10002, source: 10, target: 1002, type: "1"},
-                {id: 10003, source: 10, target: 1003, type: "1"},
-                {id: 10004, source: 10, target: 1004, type: "1"}
+                // Links for Sprint 10
+                {id: 37, source: 10, target: 1001, type: "1"}
             ]
         };
         gantt.parse(tasks);
