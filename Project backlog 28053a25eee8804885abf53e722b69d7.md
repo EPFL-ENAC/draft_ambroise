@@ -1,37 +1,4 @@
-# Project backlog
 
-## Overall features / key specs
-
-- Saisie des données par laboratoire/unité (personnel, déplacements, infrastructure, équipements, achats, services, cloud)
-- Calcul des émissions CO₂-eq selon les facteurs d'émission
-- Visualisation des résultats et export de données
-- Simulation de projets de recherche
-- Interfaces de gestion pour IT et métier
-- Authentification et gestion des rôles utilisateurs
-- API REST et système d'ingestion automatique
-- Support multilingue et accessibilité
-- Documentation, support et formation
-- Maintenance, tests et revue de code
-
-### ⚡S0
-
-- Définition design system
-    
-    Création de standards pour les formulaires, tableaux et graphiques
-    
-    Structuration des interfaces de saisie structurées par domaine (laboratoire, déplacements, infrastructure, équipements, achats, services, cloud, etc.). Placeholders Il permet à l’utilisateur :
-    
-    - d’accéder uniquement aux modules autorisés selon son rôle ;
-    - de saisir les données via des champs contrôlés et assistés ;
-    - de visualiser, modifier, trier ou supprimer les lignes saisies ;
-    - de consulter en temps réel l’impact CO2-eq calculé ;
-    - de valider un module une fois complet ;
-    - de naviguer librement entre les modules ;
-    - d’importer des données en CSV ou via ingestion automatique.
-    Le cas échéant, ce module inclut également des sous-modules spécifiques (ex. : émissions directes, transport des
-    achats, impact cloud) et des fonctionnalités optionnelles selon les besoins de chaque unité
-
-prendre connaissance de quelles data sont dispos sous quelles formes
 
 ### ⚡S1 ⚖️
 

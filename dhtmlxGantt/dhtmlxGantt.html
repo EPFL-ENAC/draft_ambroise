@@ -27,11 +27,11 @@
       bottom: 20px;
       left: 20px;
       padding: 8px 18px;
-      background: #f4f4f4;
+      background: #ffffff;
       border: 1px solid #d4d4d4;
       border-radius: 4px;
       color: #444;
-      font-family: inherit;
+      font-family: Arial;
       font-size: 15px;
       cursor: pointer;
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
@@ -58,6 +58,7 @@
   </style>
 </head>
 <body>
+    <h1>Test Frappe Gantt</h1>
     <div id="gantt_here"></div>
     <script type="text/javascript">
         gantt.config.xml_date = "%Y-%m-%d %H:%i";
@@ -82,7 +83,8 @@
                 {key: 2, label: "2"},
                 {key: 3, label: "3"},
                 {key: 4, label: "4"},
-                {key: 5, label: "5 (High)"}
+                {key: 5, label: "5 (High)"},
+                {key: "", label: ""}
             ]},
             {name:"time", type:"duration", map_to:"auto"}
         ];
@@ -93,7 +95,7 @@
         gantt.config.subscales = [
             {unit: "month", step: 1, date: "%F %Y"}
         ];
-        gantt.config.scale_height = 80; // Adjust for better visibility
+        gantt.config.scale_height = 80; 
 
         // Add columns: text, duration (weeks), complexity, progress
         gantt.config.columns = [
@@ -110,68 +112,54 @@
         gantt.config.order_branch = true; // Allow moving tasks within the same parent
         gantt.config.order_branch_free = true; // Allow moving tasks between parents
 
-        // --- Undo stack ---
-        let undoStack = [];
 
-        function pushUndo() {
-            undoStack.push(JSON.stringify(gantt.serialize()));
-            if (undoStack.length > 50) undoStack.shift(); // Limit stack size
-        }
+        fetch("C:\\Users\\ambroise\\Documents\\GitHub\\draft_ambroise\\Project backlog 28053a25eee8804885abf53e722b69d7.md")
+            .then(response => response.text())
+            .then(markdown => {
+                const sprints = markdown.split('###').slice(1); // Split by sprint headers
+                const tasks = [];
 
-        function undoGantt() {
-            if (undoStack.length > 1) {
-                undoStack.pop(); // Remove current state
-                const prev = undoStack[undoStack.length - 1];
-                gantt.clearAll();
-                gantt.parse(JSON.parse(prev));
-            }
-        }
-
-        // Track changes for undo
-        gantt.attachEvent("onAfterTaskAdd", pushUndo);
-        gantt.attachEvent("onAfterTaskUpdate", pushUndo);
-        gantt.attachEvent("onAfterTaskDelete", pushUndo);
-        gantt.attachEvent("onRowDragEnd", pushUndo);
-
+            });
+        
         gantt.init("gantt_here");
 
         var tasks = {
             data: [
                 // Sprints (parents)
-                {id: 1, text: "Sprint 1", start_date: "2025-10-27 00:00", duration: 21, progress: 0.6, complexity: 1},
-                {id: 2, text: "Sprint 2", start_date: "2025-11-18 00:00", duration: 24, progress: 0.4},
-                {id: 3, text: "Sprint 3", start_date: "2025-12-12 00:00", duration: 14, progress: 0.8},
-                {id: 4, text: "Sprint 4", start_date: "2026-01-05 00:00", duration: 15, progress: 0.2},
+                {id: 1, text: "Sprint 1", start_date: "2025-10-27 00:00", duration: 23, progress: 0.6, complexity: 1},
+                {id: 2, text: "Sprint 2", start_date: "2025-11-19 00:00", duration: 14, progress: 0.4},
+                {id: 3, text: "Sprint 3", start_date: "2025-12-03 00:00", duration: 15, progress: 0.8},
+                {id: 4, text: "Sprint 4", start_date: "2025-12-19 00:00", duration: 31, progress: 0.2},
                 {id: 5, text: "Sprint 5", start_date: "2026-01-20 00:00", duration: 22, progress: 0.5},
                 {id: 6, text: "Sprint 6", start_date: "2026-02-11 00:00", duration: 20, progress: 0.7},
-                {id: 7, text: "Sprint 7", start_date: "2026-03-03 00:00", duration: 15, progress: 0.3},
-                {id: 8, text: "Sprint 8", start_date: "2026-03-18 00:00", duration: 15, progress: 0.9},
-                {id: 9, text: "Sprint 9", start_date: "2026-04-02 00:00", duration: 19, progress: 0.1},
-                {id: 10, text: "Sprint 10", start_date: "2026-04-21 00:00", duration: 28, progress: 0.4},
+                {id: 7, text: "Sprint 7", start_date: "2026-03-03 00:00", duration: 21, progress: 0.3},
+                {id: 8, text: "Sprint 8", start_date: "2026-03-23 00:00", duration: 21, progress: 0.9},
+                {id: 9, text: "Sprint 9", start_date: "2026-04-14 00:00", duration: 21, progress: 0.1},
+                {id: 10, text: "Sprint 10", start_date: "2026-05-05 00:00", duration: 21, progress: 0.4},
 
                 // Sprint 1 Feats
-                {id: 109, text: "Page d'accueil minimaliste", parent: 1, start_date: "2025-10-27 00:00", duration: 21},
-                {id: 110, text: "Module mon labo", parent: 1, start_date: "2025-10-27 00:00", duration: 21},
-                {id: 111, text: "Module déplacement pro", parent: 1, start_date: "2025-10-27 00:00", duration: 21},
-                {id: 112, text: "[Specs] Validation specs S2: Module Infrastructure", parent: 1, start_date: "2025-10-27 00:00", duration: 21},
+                {id: 109, text: "Page d'accueil minimaliste", parent: 1, start_date: "2025-10-27 00:00", duration: 23},
+                {id: 110, text: "Module mon labo", parent: 1, start_date: "2025-10-27 00:00", duration: 23},
+                {id: 111, text: "Module déplacement pro", parent: 1, start_date: "2025-10-27 00:00", duration: 23},
+                {id: 112, text: "[Specs] Validation specs S2: Module Infrastructure", parent: 1, start_date: "2025-10-27 00:00", duration: 23},
 
                 // Sprint 2 Feats
-                {id: 201, text: "Module Infrastructure", parent: 2, start_date: "2025-11-18 00:00", duration: 24},
-                {id: 202, text: "Navigation inter-modules (placeholders de toute l'architecture)", parent: 2, start_date: "2025-11-18 00:00", duration: 24},
-                {id: 203, text: "Améliorations UX", parent: 2, start_date: "2025-11-18 00:00", duration: 24},
-                {id: 204, text: "[Specs] Modules consomation électrique équipements / Achats", parent: 2, start_date: "2025-11-18 00:00", duration: 24},
+                {id: 201, text: "Module Infrastructure", parent: 2, start_date: "2025-11-19 00:00", duration: 14},
+                {id: 202, text: "Navigation inter-modules (placeholders de toute l'architecture)", parent: 2, start_date: "2025-11-19 00:00", duration: 14},
+                {id: 203, text: "Améliorations UX", parent: 2, start_date: "2025-11-19 00:00", duration: 14},
+                {id: 204, text: "[Specs] Modules consomation électrique équipements / Achats", parent: 2, start_date: "2025-11-19 00:00", duration: 14},
 
                 // Sprint 3 Feats
-                {id: 301, text: "Module consommation électrique équipements", parent: 3, start_date: "2025-12-12 00:00", duration: 14},
-                {id: 302, text: "Visualisation des résultats", parent: 3, start_date: "2025-12-12 00:00", duration: 14},
-                {id: 303, text: "Export des résultats", parent: 3, start_date: "2025-12-12 00:00", duration: 14},
-                {id: 304, text: "[Specs] Modules achats", parent: 3, start_date: "2025-12-12 00:00", duration: 14},
+                {id: 301, text: "Module consommation électrique équipements", parent: 3, start_date: "2025-12-03 00:00", duration: 15},
+                {id: 302, text: "Visualisation des résultats", parent: 3, start_date: "2025-12-03 00:00", duration: 15},
+                {id: 303, text: "Export des résultats", parent: 3, start_date: "2025-12-03 00:00", duration: 15},
+                {id: 304, text: "[Specs] Modules achats", parent: 3, start_date: "2025-12-03 00:00", duration: 15},
 
                 // Sprint 4 Feats
-                {id: 401, text: "Auth : Gestion des rôles (5 types) & Mapping des rôles avec Accred & Sécurité d'accès", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
-                {id: 402, text: "Journalisation / logs", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
-                {id: 403, text: "Module achats (1/2)", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
-                {id: 404, text: "[Specs] Module Achat / service interne", parent: 4, start_date: "2026-01-05 00:00", duration: 15},
+                {id: 401, text: "Auth : Gestion des rôles (5 types) & Mapping des rôles avec Accred & Sécurité d'accès", parent: 4, start_date: "2025-12-19 00:00", duration: 31},
+                {id: 402, text: "Journalisation / logs", parent: 4, start_date: "2025-12-19 00:00", duration: 31},
+                {id: 403, text: "Module achats (1/2)", parent: 4, start_date: "2025-12-19 00:00", duration: 31},
+                {id: 404, text: "[Specs] Module Achat / service interne", parent: 4, start_date: "2025-12-19 00:00", duration: 31},
 
                 // Sprint 5 Feats
                 {id: 501, text: "Module achats (2/2)", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
@@ -188,24 +176,23 @@
                 {id: 605, text: "[Specs] Alimentation et énergie grise / module service cloud", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
 
                 // Sprint 7 Feats
-                {id: 701, text: "Alimentation et pendularité (optionel)", parent: 7, start_date: "2026-03-03 00:00", duration: 15},
-                {id: 702, text: "Energie grise (optionel)", parent: 7, start_date: "2026-03-03 00:00", duration: 15},
-                {id: 703, text: "[Specs] Module service cloud / Déchets / Simulation de projet", parent: 7, start_date: "2026-03-03 00:00", duration: 15},
+                {id: 701, text: "Alimentation et pendularité (optionel)", parent: 7, start_date: "2026-03-03 00:00", duration: 21},
+                {id: 702, text: "Energie grise (optionel)", parent: 7, start_date: "2026-03-03 00:00", duration: 21},
+                {id: 703, text: "[Specs] Module service cloud / Déchets / Simulation de projet", parent: 7, start_date: "2026-03-03 00:00", duration: 21},
 
                 // Sprint 8 Feats
-                {id: 801, text: "Module Impact des services cloud (optionel)", parent: 8, start_date: "2026-03-18 00:00", duration: 15},
-                {id: 802, text: "Déchets (optionel)", parent: 8, start_date: "2026-03-18 00:00", duration: 15},
-                {id: 803, text: "[Specs] Simulation de projet", parent: 8, start_date: "2026-03-18 00:00", duration: 15},
+                {id: 801, text: "Module Impact des services cloud (optionel)", parent: 8, start_date: "2026-03-23 00:00", duration: 21},
+                {id: 802, text: "Déchets (optionel)", parent: 8, start_date: "2026-03-23 00:00", duration: 21},
+                {id: 803, text: "[Specs] Simulation de projet", parent: 8, start_date: "2026-03-23 00:00", duration: 21},
 
                 // Sprint 9 Feats
-                {id: 901, text: "Simulation de projet (optionnel)", parent: 9, start_date: "2026-04-02 00:00", duration: 19},
-                {id: 902, text: "API REST sécurisée (lecture)", parent: 9, start_date: "2026-04-02 00:00", duration: 19},
-                {id: 903, text: "Documentation Swagger/OpenAPI", parent: 9, start_date: "2026-04-02 00:00", duration: 19},
-                {id: 904, text: "[Specs] Retour", parent: 9, start_date: "2026-04-02 00:00", duration: 19},
-
+                {id: 901, text: "Simulation de projet (optionnel)", parent: 9, start_date: "2026-04-14 00:00", duration: 21},
+                {id: 902, text: "API REST sécurisée (lecture)", parent: 9, start_date: "2026-04-14 00:00", duration: 21},
+                {id: 903, text: "Documentation Swagger/OpenAPI", parent: 9, start_date: "2026-04-14 00:00", duration: 21},
+                {id: 904, text: "[Specs] Retour", parent: 9, start_date: "2026-04-14 00:00", duration: 21},
 
                 // Sprint 10 Feats
-                {id: 1001, text: "Intégration des retours", parent: 10, start_date: "2026-04-21 00:00", duration: 28}
+                {id: 1001, text: "Intégration des retours", parent: 10, start_date: "2026-05-05 00:00", duration: 21}
             ],
             links: [
                 // Links for Sprint 1
@@ -280,34 +267,10 @@
             }
     </script>
     <button class="gantt-btn" onclick="toggleGrid()">Afficher/Masquer la grille</button>
-    <button class="gantt-btn" style="left:auto; right:20px;" onclick="undoGantt()">Annuler</button>
     <script type="text/javascript">
-        // --- Undo stack ---
-        let undoStack = [];
+        
 
-        function pushUndo() {
-            undoStack.push(JSON.stringify(gantt.serialize()));
-            if (undoStack.length > 50) undoStack.shift(); // Limit stack size
-        }
-
-        function undoGantt() {
-            if (undoStack.length > 1) {
-                undoStack.pop(); // Remove current state
-                const prev = undoStack[undoStack.length - 1];
-                gantt.clearAll();
-                gantt.parse(JSON.parse(prev));
-            }
-        }
-
-        // Track changes for undo
-        gantt.attachEvent("onAfterTaskAdd", pushUndo);
-        gantt.attachEvent("onAfterTaskUpdate", pushUndo);
-        gantt.attachEvent("onAfterTaskDelete", pushUndo);
-        gantt.attachEvent("onRowDragEnd", pushUndo);
-        gantt.attachEvent("onAfterLinkAdd", pushUndo);
-        gantt.attachEvent("onAfterLinkUpdate", pushUndo);
-        gantt.attachEvent("onAfterLinkDelete", pushUndo);
-
+        
         // Initialize and push initial state
         gantt.init("gantt_here");
         gantt.parse(tasks);
