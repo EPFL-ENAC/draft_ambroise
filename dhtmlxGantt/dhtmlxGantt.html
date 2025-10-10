@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Test Frappe Gantt</title>
+  <title>dhtmlxGantt-Co2-calc</title>
   <script src="codebase/dhtmlxgantt.js"></script>
   <link href="codebase/dhtmlxgantt.css" rel="stylesheet">
   <style>
@@ -17,6 +17,7 @@
       height: 100vh;
       min-height: 100%;
       box-sizing: border-box;
+      font-size: 18px;                 /* change overall font-size */
     }
     h1 {
       display: none; /* Hide the h1 for full-page Gantt */
@@ -52,26 +53,40 @@
     }
     /* Add a specific style for "[Specs]" tasks */
     .gantt_task_line.specs-task {
-        background-color: #FFD700 !important; /* Gold background */
+        background-color: #daba07 !important; /* Gold background */
         border: 1px solid #DAA520 !important; /* Darker gold border */
     }
+    /* Ensure specs that are children stay yellow (higher specificity) */
+    .gantt_task_line.specs-task.child-task {
+        background-color: #daba07 !important;
+        border: 1px solid #DAA520 !important;
+    }
+    /* ROW / FONT sizing: adapter ces valeurs au même que JS (row_height / bar_height) */
+    .gantt_tree_cell, .gantt_grid_row .gantt_cell {
+      font-size: 20px;      /* texte colonne / grille */
+      line-height: 60px;    /* = gantt.config.row_height */
+    }
+    .gantt_task_row { height: 60px !important; } /* = gantt.config.row_height */
+    .gantt_task_content, .gantt_task_text {
+      font-size: 18px;      /* texte dans la barre */
+      line-height: 30px;    /* = gantt.config.bar_height */
+    }
+    
   </style>
-</head>
-<body>
-    <h1>Test Frappe Gantt</h1>
+  </head>
+  <body>
+    <h1>dhtmlxGantt-Co2-calc</h1>
     <div id="gantt_here"></div>
     <script type="text/javascript">
         gantt.config.xml_date = "%Y-%m-%d %H:%i";
 
-        // Color only tasks that have a parent or contain "[Specs]"
+        // Color only tasks that have a parent or are marked as specs
         gantt.templates.task_class = function(start, end, task){
-            if (task.text.includes("[Specs]")) {
-                return "specs-task"; // Add a specific class for "[Specs]" tasks
-            }
-            if (task.parent && task.parent != 0) {
-                return "child-task"; // Default child task class
-            }
-            return "";
+            var classes = [];
+            // use explicit flag set by the parser instead of relying on "[Specs]" text
+            if (task.isSpec) classes.push("specs-task");
+            if (task.parent && task.parent != 0) classes.push("child-task");
+            return classes.join(" ");
         };
 
         // Lightbox config
@@ -96,12 +111,13 @@
             {unit: "month", step: 1, date: "%F %Y"}
         ];
         gantt.config.scale_height = 80; 
+        gantt.config.min_column_width = 140;
 
         // Add columns: text, duration (weeks), complexity, progress
         gantt.config.columns = [
             {name:"text", label:"name", width:"*", tree:true },
             {name:"duration_weeks", label:"Durée (semaines)", align:"center", width:120, template:function(obj){
-                return Math.round(obj.duration/7);
+                return Math.round((obj.duration||0)/7);
             },},
             {name:"complexity", label:"Complexité", align:"center", width:100, template:function(obj){
                 return obj.complexity || "";
@@ -109,172 +125,172 @@
             {name:"add", label:"", width:44 }
         ];
 
-        gantt.config.order_branch = true; // Allow moving tasks within the same parent
-        gantt.config.order_branch_free = true; // Allow moving tasks between parents
+        gantt.config.order_branch = true;
+        gantt.config.order_branch_free = true;
 
+        // Row / bar sizing (set BEFORE gantt.init)
+        gantt.config.row_height = 60;   // change ici la hauteur de la ligne (px)
+        gantt.config.bar_height = 30;   // change ici la hauteur de la barre (px) (<= row_height)
+        // optional: ajuster taille globale du texte du conteneur
+        document.getElementById('gantt_here').style.fontSize = '16px';
 
-        fetch("C:\\Users\\ambroise\\Documents\\GitHub\\draft_ambroise\\Project backlog 28053a25eee8804885abf53e722b69d7.md")
-            .then(response => response.text())
-            .then(markdown => {
-                const sprints = markdown.split('###').slice(1); // Split by sprint headers
-                const tasks = [];
+        // helper date functions
+        function pad(n){ return n<10 ? '0'+n : String(n); }
+        function formatGanttDate(d){
+            return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' 00:00';
+        }
+        function toDateFromDDMM(ddmm, year){
+            const parts = ddmm.split('.').map(x=>parseInt(x,10));
+            return new Date(year, parts[1]-1, parts[0], 0, 0, 0);
+        }
+        function daysInclusive(start, end){
+            const ms = 24*60*60*1000;
+            return Math.round((end - start)/ms) + 1;
+        }
 
+        // parse markdown -> gantt data
+        function parseMarkdownToGanttData(markdown, baseYear){
+            const sections = markdown.split(/^###\s*/m).slice(1);
+            const data = [];
+            const links = [];
+            let year = baseYear || (new Date()).getFullYear();
+            let prevStartMonth = null;
+            let linkId = 1;
+
+            sections.forEach((section, idx) => {
+                const headerLine = (section.split('\n')[0] || '').trim();
+                // match header with optional "⚡" and optional "S" label and dates dd.mm - dd.mm
+                const headerMatch = headerLine.match(/⚡?\s*(S?\d+)?\s*([0-3]?\d\.\d{1,2})\s*-\s*([0-3]?\d\.\d{1,2})/i);
+                if(!headerMatch) return; // skip malformed section
+
+                const sprintLabel = headerMatch[1] ? headerMatch[1] : `${idx+1}`;
+                const startDDMM = headerMatch[2];
+                const endDDMM = headerMatch[3];
+
+                const startMonth = parseInt(startDDMM.split('.')[1],10);
+                // handle year rollover (e.g. Dec -> Jan)
+                if(prevStartMonth === null) prevStartMonth = startMonth;
+                else if(startMonth < prevStartMonth) year++;
+                prevStartMonth = startMonth;
+
+                const startDateObj = toDateFromDDMM(startDDMM, year);
+                let endYear = year;
+                const endMonth = parseInt(endDDMM.split('.')[1],10);
+                if(endMonth < startMonth) endYear = year + 1;
+                const endDateObj = toDateFromDDMM(endDDMM, endYear);
+                const duration = daysInclusive(startDateObj, endDateObj);
+
+                const sprintId = idx + 1;
+                // normalize label: remove leading "S" if present so it becomes "Sprint 1" instead of "Sprint S1"
+                let rawLabel = headerMatch[1] ? headerMatch[1] : String(idx+1);
+                let labelNumber = String(rawLabel).replace(/^S/i, '').trim();
+                if (!labelNumber) labelNumber = String(idx+1);
+                data.push({
+                    id: sprintId,
+                    text: `Sprint ${labelNumber}`,
+                    start_date: formatGanttDate(startDateObj),
+                    duration: duration,
+                    progress: 0
+                });
+
+                // extract top-level tasks: lines starting with "- " with no leading spaces
+                const lines = section.split('\n');
+                let taskIndex = 0;
+                for(let i=1;i<lines.length;i++){ // start from 1 to skip header line
+                    const line = lines[i];
+                    const topMatch = line.match(/^\s*-\s+(.+)$/);
+                    if(topMatch && line.search(/^\s*-/) === 0){ // top-level list item
+                        taskIndex++;
+                        let title = topMatch[1].trim();
+                        // detect and strip "[Specs]" prefix on list items and mark as spec
+                        let isSpecTask = false;
+                        const tSpec = title.match(/^\s*\[?\s*Specs\s*\]?\s*[:\-–]?\s*(.*)$/i);
+                        if (tSpec) {
+                            isSpecTask = true;
+                            title = (tSpec[1] || '').trim() || 'Specs';
+                        }
+                        // collect indented description lines following the task
+                        let descLines = [];
+                        let j = i+1;
+                        while(j < lines.length && (lines[j].match(/^\s{4,}.+/) || lines[j].trim() === '')){
+                            if(lines[j].match(/^\s{4,}(.+)/)){
+                                descLines.push(lines[j].replace(/^\s{4,}/,''));
+                            }
+                            j++;
+                        }
+                        i = j-1; // advance outer loop
+                        const taskId = sprintId*100 + taskIndex;
+                        data.push({
+                            id: taskId,
+                            text: title,
+                            parent: sprintId,
+                            start_date: formatGanttDate(startDateObj),
+                            duration: duration,
+                            description: descLines.join('\n').trim(),
+                            isSpec: isSpecTask
+                        });
+                        links.push({ id: linkId++, source: sprintId, target: taskId, type: "1" });
+                    }
+                }
+                // also treat any "[Specs]" / "Specs" lines in the section as a child task (yellow)
+                // create visible text WITHOUT the "[Specs]" prefix, but mark isSpec=true so CSS applies
+                const specsRegex = /^\s*(?:\[(?:Specs)\]|\bSpecs\b)\s*[:\-–]?\s*(.+)?$/gmi;
+                let specMatch;
+                while((specMatch = specsRegex.exec(section)) !== null){
+                    const body = specMatch[1] && specMatch[1].trim() ? specMatch[1].trim() : 'Specs';
+                    const displayText = body; // no "[Specs]" prefix in visible label
+                    // avoid duplicating if a task with same text already exists
+                    const exists = data.some(d => d.parent === sprintId && d.text === displayText);
+                    if(!exists){
+                        taskIndex++;
+                        const taskId = sprintId*100 + taskIndex;
+                        data.push({
+                            id: taskId,
+                            text: displayText,
+                            parent: sprintId,
+                            start_date: formatGanttDate(startDateObj),
+                            duration: duration,
+                            isSpec: true
+                        });
+                        links.push({ id: linkId++, source: sprintId, target: taskId, type: "1" });
+                    }
+                }
             });
-        
+
+            return { data: data, links: links };
+        }
+
+        // initialize gantt once
         gantt.init("gantt_here");
 
-        var tasks = {
-            data: [
-                // Sprints (parents)
-                {id: 1, text: "Sprint 1", start_date: "2025-10-27 00:00", duration: 23, progress: 0.6, complexity: 1},
-                {id: 2, text: "Sprint 2", start_date: "2025-11-19 00:00", duration: 14, progress: 0.4},
-                {id: 3, text: "Sprint 3", start_date: "2025-12-03 00:00", duration: 15, progress: 0.8},
-                {id: 4, text: "Sprint 4", start_date: "2025-12-19 00:00", duration: 31, progress: 0.2},
-                {id: 5, text: "Sprint 5", start_date: "2026-01-20 00:00", duration: 22, progress: 0.5},
-                {id: 6, text: "Sprint 6", start_date: "2026-02-11 00:00", duration: 20, progress: 0.7},
-                {id: 7, text: "Sprint 7", start_date: "2026-03-03 00:00", duration: 21, progress: 0.3},
-                {id: 8, text: "Sprint 8", start_date: "2026-03-23 00:00", duration: 21, progress: 0.9},
-                {id: 9, text: "Sprint 9", start_date: "2026-04-14 00:00", duration: 21, progress: 0.1},
-                {id: 10, text: "Sprint 10", start_date: "2026-05-05 00:00", duration: 21, progress: 0.4},
-
-                // Sprint 1 Feats
-                {id: 109, text: "Page d'accueil minimaliste", parent: 1, start_date: "2025-10-27 00:00", duration: 23},
-                {id: 110, text: "Module mon labo", parent: 1, start_date: "2025-10-27 00:00", duration: 23},
-                {id: 111, text: "Module déplacement pro", parent: 1, start_date: "2025-10-27 00:00", duration: 23},
-                {id: 112, text: "[Specs] Validation specs S2: Module Infrastructure", parent: 1, start_date: "2025-10-27 00:00", duration: 23},
-
-                // Sprint 2 Feats
-                {id: 201, text: "Module Infrastructure", parent: 2, start_date: "2025-11-19 00:00", duration: 14},
-                {id: 202, text: "Navigation inter-modules (placeholders de toute l'architecture)", parent: 2, start_date: "2025-11-19 00:00", duration: 14},
-                {id: 203, text: "Améliorations UX", parent: 2, start_date: "2025-11-19 00:00", duration: 14},
-                {id: 204, text: "[Specs] Modules consomation électrique équipements / Achats", parent: 2, start_date: "2025-11-19 00:00", duration: 14},
-
-                // Sprint 3 Feats
-                {id: 301, text: "Module consommation électrique équipements", parent: 3, start_date: "2025-12-03 00:00", duration: 15},
-                {id: 302, text: "Visualisation des résultats", parent: 3, start_date: "2025-12-03 00:00", duration: 15},
-                {id: 303, text: "Export des résultats", parent: 3, start_date: "2025-12-03 00:00", duration: 15},
-                {id: 304, text: "[Specs] Modules achats", parent: 3, start_date: "2025-12-03 00:00", duration: 15},
-
-                // Sprint 4 Feats
-                {id: 401, text: "Auth : Gestion des rôles (5 types) & Mapping des rôles avec Accred & Sécurité d'accès", parent: 4, start_date: "2025-12-19 00:00", duration: 31},
-                {id: 402, text: "Journalisation / logs", parent: 4, start_date: "2025-12-19 00:00", duration: 31},
-                {id: 403, text: "Module achats (1/2)", parent: 4, start_date: "2025-12-19 00:00", duration: 31},
-                {id: 404, text: "[Specs] Module Achat / service interne", parent: 4, start_date: "2025-12-19 00:00", duration: 31},
-
-                // Sprint 5 Feats
-                {id: 501, text: "Module achats (2/2)", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
-                {id: 502, text: "Comparaison temporelle", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
-                {id: 503, text: "Documentation user help", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
-                {id: 504, text: "Ingestion automatique CSV (optionnel)", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
-                {id: 505, text: "[Specs] Module services interne", parent: 5, start_date: "2026-01-20 00:00", duration: 22},
-
-                // Sprint 6 Feats
-                {id: 601, text: "Module services Interne", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
-                {id: 602, text: "Métier complet/restreint", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
-                {id: 603, text: "Messages d'erreur et validations", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
-                {id: 604, text: "Interface IT", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
-                {id: 605, text: "[Specs] Alimentation et énergie grise / module service cloud", parent: 6, start_date: "2026-02-11 00:00", duration: 20},
-
-                // Sprint 7 Feats
-                {id: 701, text: "Alimentation et pendularité (optionel)", parent: 7, start_date: "2026-03-03 00:00", duration: 21},
-                {id: 702, text: "Energie grise (optionel)", parent: 7, start_date: "2026-03-03 00:00", duration: 21},
-                {id: 703, text: "[Specs] Module service cloud / Déchets / Simulation de projet", parent: 7, start_date: "2026-03-03 00:00", duration: 21},
-
-                // Sprint 8 Feats
-                {id: 801, text: "Module Impact des services cloud (optionel)", parent: 8, start_date: "2026-03-23 00:00", duration: 21},
-                {id: 802, text: "Déchets (optionel)", parent: 8, start_date: "2026-03-23 00:00", duration: 21},
-                {id: 803, text: "[Specs] Simulation de projet", parent: 8, start_date: "2026-03-23 00:00", duration: 21},
-
-                // Sprint 9 Feats
-                {id: 901, text: "Simulation de projet (optionnel)", parent: 9, start_date: "2026-04-14 00:00", duration: 21},
-                {id: 902, text: "API REST sécurisée (lecture)", parent: 9, start_date: "2026-04-14 00:00", duration: 21},
-                {id: 903, text: "Documentation Swagger/OpenAPI", parent: 9, start_date: "2026-04-14 00:00", duration: 21},
-                {id: 904, text: "[Specs] Retour", parent: 9, start_date: "2026-04-14 00:00", duration: 21},
-
-                // Sprint 10 Feats
-                {id: 1001, text: "Intégration des retours", parent: 10, start_date: "2026-05-05 00:00", duration: 21}
-            ],
-            links: [
-                // Links for Sprint 1
-                {id: 1, source: 1, target: 109, type: "1"},
-                {id: 2, source: 1, target: 110, type: "1"},
-                {id: 3, source: 1, target: 111, type: "1"},
-                {id: 4, source: 1, target: 112, type: "1"},
-
-                // Links for Sprint 2
-                {id: 5, source: 2, target: 201, type: "1"},
-                {id: 6, source: 2, target: 202, type: "1"},
-                {id: 7, source: 2, target: 203, type: "1"},
-                {id: 8, source: 2, target: 204, type: "1"},
-
-                // Links for Sprint 3
-                {id: 9, source: 3, target: 301, type: "1"},
-                {id: 10, source: 3, target: 302, type: "1"},
-                {id: 11, source: 3, target: 303, type: "1"},
-                {id: 12, source: 3, target: 304, type: "1"},
-
-                // Links for Sprint 4
-                {id: 13, source: 4, target: 401, type: "1"},
-                {id: 14, source: 4, target: 402, type: "1"},
-                {id: 15, source: 4, target: 403, type: "1"},
-                {id: 16, source: 4, target: 404, type: "1"},
-
-                // Links for Sprint 5
-                {id: 17, source: 5, target: 501, type: "1"},
-                {id: 18, source: 5, target: 502, type: "1"},
-                {id: 19, source: 5, target: 503, type: "1"},
-                {id: 20, source: 5, target: 504, type: "1"},
-                {id: 21, source: 5, target: 505, type: "1"},
-
-                // Links for Sprint 6
-                {id: 22, source: 6, target: 601, type: "1"},
-                {id: 23, source: 6, target: 602, type: "1"},
-                {id: 24, source: 6, target: 603, type: "1"},
-                {id: 25, source: 6, target: 604, type: "1"},
-                {id: 26, source: 6, target: 605, type: "1"},
-
-                // Links for Sprint 7
-                {id: 27, source: 7, target: 701, type: "1"},
-                {id: 28, source: 7, target: 702, type: "1"},
-                {id: 29, source: 7, target: 703, type: "1"},
-
-                // Links for Sprint 8
-                {id: 30, source: 8, target: 801, type: "1"},
-                {id: 31, source: 8, target: 802, type: "1"},
-                {id: 32, source: 8, target: 803, type: "1"},
-
-                // Links for Sprint 9
-                {id: 33, source: 9, target: 901, type: "1"},
-                {id: 34, source: 9, target: 902, type: "1"},
-                {id: 35, source: 9, target: 903, type: "1"},
-                {id: 36, source: 9, target: 904, type: "1"},
-
-                // Links for Sprint 10
-                {id: 37, source: 10, target: 1001, type: "1"}
-            ]
-        };
-        gantt.parse(tasks);
-
-        
+        // fetch markdown relatively (works on github pages if file is in same folder)
+        const mdFileName = 'Project backlog 28053a25eee8804885abf53e722b69d7.md';
+        const mdPath = './' + encodeURIComponent(mdFileName); // encode spaces
+        fetch(mdPath)
+            .then(response => {
+                if(!response.ok) throw new Error('fetch failed: ' + response.status);
+                return response.text();
+            })
+            .then(markdown => {
+                const ganttData = parseMarkdownToGanttData(markdown, 2025); // base year 2025
+                console.log('parsed ganttData', ganttData);
+                gantt.clearAll();
+                gantt.parse(ganttData);
+            })
+            .catch(error => {
+                console.error('Erreur lors de la lecture du fichier Markdown :', error);
+                // fallback: keep existing hardcoded data if desired (optional)
+            });
 
         window.addEventListener("resize", function() {
             gantt.setSizes();
         });
 
         function toggleGrid() {
-                gantt.config.show_grid = !gantt.config.show_grid;
-                gantt.render();
-            }
+            gantt.config.show_grid = !gantt.config.show_grid;
+            gantt.render();
+        }
     </script>
     <button class="gantt-btn" onclick="toggleGrid()">Afficher/Masquer la grille</button>
-    <script type="text/javascript">
-        
-
-        
-        // Initialize and push initial state
-        gantt.init("gantt_here");
-        gantt.parse(tasks);
-        pushUndo();
-    </script>
 </body>
 </html>
