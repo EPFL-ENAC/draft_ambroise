@@ -7,6 +7,8 @@ import os
 
 CSV_PATH = "C:\\Users\\ambroise\\Documents\\GitHub\\draft_ambroise\\calc_eco_concept\\Ecoconception.csv"
 
+large_value = 300
+height_value = 108
 def load_data(csv_path):
     df = pd.read_csv(csv_path, sep=';')
     return df
@@ -49,10 +51,10 @@ def update_graph(n_clicks, selected_id):
         priority_levels = sorted(df["Priority"].unique(), reverse=False)  # Higher priority at the top
         lifecycle_levels = {lifecycle: i for i, lifecycle in enumerate(sorted(df["Lifecycle"].unique()))}
         category_levels = {category: i for i, category in enumerate(sorted(df["Category"].unique()))}
-        sections_levels = {section: i for i, section in enumerate(sorted(df["Section"].unique()))}
-       
+        section_order = {section: i for i, section in enumerate(sorted(df["Section"].unique()))}
 
         y_positions = []
+        x_positions = []
         for _, row in df.iterrows():
             # Calculate y position: Priority determines the main section, Lifecycle and Category refine it
             priority_index = priority_levels.index(row["Priority"])
@@ -60,53 +62,82 @@ def update_graph(n_clicks, selected_id):
             category_index = category_levels[row["Category"]]
 
             # Combine indices to create a unique y position
-            y = priority_index * 100 + lifecycle_index * 10 + category_index
-            y_positions.append(y)
+            y = priority_index * 108 + (category_index * 12 + 6)
 
-        # Assign x positions based on Section
-        section_order = {section: i for i, section in enumerate(sorted(df["Section"].unique()))}
-        df["x"] = df["Section"].map(section_order)  # Map sections to sequential x positions
+            # Calculate x position: Section determines the main x position
+            x = section_order[row["Section"]] * 250 + 125  # Double the x-axis width
+            i = 1
+            # Ensure no overlap by slightly adjusting x if the same y already exists
+            while (x, y) in zip(x_positions, y_positions):
+                x += i*15 
+                # Slightly adjust x to avoid overlap
+                if (x, y) in zip(x_positions, y_positions):
+                    i += 1 
+                    x -= i*15
+                i += 1
+            y_positions.append(y)
+            x_positions.append(x)
+
+        # Assign x and y positions to the DataFrame
+        df["x"] = x_positions
         df["y"] = y_positions
 
     # Create the scatter plot
-    df["size_adjusted"] = df["Priority"] * 1
+    df["size"] = 100  # Fixed size for all points
     fig = px.scatter(
         df,
         x="x", y="y",
-        size="size_adjusted",
-        size_max=15,
+        size="size",
+        size_max=5,
         color="Lifecycle",
         hover_name="Title",
-        hover_data=["Category", "ValidationRules", "Section", "Priority"],
+        hover_data=[ "ValidationRules"],
+        #text="Domain"  # Add the Domain string as text below each point
     )
+    fig.update_traces(
+    customdata=df[["Title", "ValidationRules"]],  # Add Title and ValidationRules as custom data
+    hovertemplate="<b>Title:</b> %{customdata[0]}<br>" +  # Display Title
+                  "<b>Validation Rules:</b> %{customdata[1]}<br>" +  # Display ValidationRules
+                  "<extra></extra>"  # Remove the default trace info
+)
 
     # Add shadow lines for Priority levels
     for i, priority in enumerate(priority_levels):
-        y_start = i * 100
+        y_start = i * 108 
         fig.add_shape(
             type="line",
-            x0=0, x1=len(df["Section"].unique()),  # Full width of the plot
+            x0=0, x1=len(df["Section"].unique()) * 250,  # Adjusted for double x-axis width
             y0=y_start, y1=y_start,
             line=dict(color="LightGray", width=1, dash="dot")  # Shadow line style
         )
 
-    # Add shadow lines for Lifecycle within each Priority
+    # Add shadow lines for Category within each Priority
     for i, priority in enumerate(priority_levels):
-        for j in range(len(lifecycle_levels)):
-            y_start = i * 100 + j * 10
+        for j, category in enumerate(category_levels):
+            y_start = i * 108 + j * 12 
             fig.add_shape(
                 type="line",
-                x0=0, x1=len(df["Section"].unique()),
+                x0=0, x1=len(df["Section"].unique()) * 250,  # Adjusted for double x-axis width
                 y0=y_start, y1=y_start,
                 line=dict(color="Gainsboro", width=0.5, dash="dot")
+            )
+            # Add category labels as a sub-legend
+             # Add the label only once per priority block
+            fig.add_annotation(
+                x=-50,  # Place the label outside the plot area
+                y=y_start + 6,  # Center the label within the category block
+                text=f" {category}",
+                showarrow=False,
+                font=dict(size=10, color="Gray"),
+                align="right",
             )
 
     # Add vertical lines for each Section
     for i, section in enumerate(sorted(df["Section"].unique())):
         fig.add_shape(
             type="line",
-            x0=i, x1=i,
-            y0=0, y1=max(y_positions),
+            x0=i * 250, x1=i * 250,  # Adjusted for double x-axis width
+            y0=0, y1=max(y_positions)+20,
             line=dict(color="LightGray", width=1, dash="dot")
         )
 
@@ -114,18 +145,23 @@ def update_graph(n_clicks, selected_id):
     fig.update_layout(
         yaxis=dict(
             title="Priority / Lifecycle / Category",
-            tickvals=[i * 100 for i in range(len(priority_levels))],
+            tickvals=[i * 108 + 54 for i in range(len(priority_levels))],
             ticktext=[f"Priority {p}" for p in priority_levels],
             showgrid=False,  # Disable default gridlines
         ),
         xaxis=dict(
             title="Section",
-            tickvals=list(range(len(section_order))),
+            tickvals=[i * 250 + 125 for i in range(len(section_order))],  # Adjusted for double x-axis width
             ticktext=list(section_order.keys()),  # Show section names as x-axis labels
             showgrid=False,  # Disable default gridlines
         ),
         plot_bgcolor='white',
         legend_title="Lifecycle",  # Add a clear legend title
+    )
+
+    # Adjust text position to appear below the points
+    fig.update_traces(
+        textposition="bottom center"  # Position the text below the points
     )
 
     return fig
@@ -141,18 +177,27 @@ def display_info(clickData):
         point = clickData["points"][0]
         Category = point["hovertext"]
         df = load_data(CSV_PATH)
-        row = df[df["Category"] == Category].iloc[0]
-        return (
-            html.Div([
-                html.H3(row["Category"]),
-                html.P(f"Description: {row['Description']}"),
-                html.P(f"Priority: {row['Priority']}"),
-                html.P(f"Lifecycle: {row['Lifecycle']}"),
-                html.P(f"Validation Rules: {row['ValidationRules']}"),
-                html.P(f"Section: {row['Section']}"),
-            ]),
-            int(row["id"])
-        )
+        
+        # Filter the DataFrame for the selected Category
+        filtered_df = df[df["Category"] == Category]
+        
+        # Check if the filtered DataFrame is empty
+        if not filtered_df.empty:
+            row = filtered_df.iloc[0]  # Safely access the first row
+            return (
+                html.Div([
+                    html.H3(row["Category"]),
+                    html.P(f"Description: {row['Description']}"),
+                    html.P(f"Priority: {row['Priority']}"),
+                    html.P(f"Lifecycle: {row['Lifecycle']}"),
+                    html.P(f"Validation Rules: {row['ValidationRules']}"),
+                    html.P(f"Section: {row['Section']}"),
+                ]),
+                int(row["id"])
+            )
+        else:
+            return html.Div("No data found for the selected category."), None
+
     return html.Div("Click a Category to view details."), None
 
 
