@@ -95,8 +95,6 @@ Compress documents;97;3;5. Utilization;4. Documents;3. Technical;Content / docum
 Optimize PDF files;98;3;5. Utilization;4. Documents;3. Technical;Content / document;User;The number non-optimized PDFs is lower or equal than '0';;0;;;
 Adapt texts to the web;100;3;5. Utilization;5. Others;3. Technical;Content / text;User;The number texts displayed on the website with a readability score based on the Flesch-Kincaid index of less than 60 is lower or equal than '0';;0;;;
 Use less analytics tools and limit data collection;4111;4;5. Utilization;5. Others;3. Technical;User interface;User;The number analytics tools is lower or equal than '1';;0;;;
-Avoid redirections;45;4;6. Support;1. Support;3. Technical;DNS;Software architect / developper;The number The number of redirects is equal to or less than is lower or equal than '1';;0;;;
-Disable binary logs;83;2;6. Support;1. Support;3. Technical;Servers;System administrator;The number of options --skip-log-bin and --disable-log-bin not activated in cases where binary logs are not useful is lower or equal than '0';;0;;;
-Set up a content end-of-life plan;4114;4;7. End of life;2. End of life;3. Technical;Content ;User;The number of stored contents that are not accessible on web pages is lower or equal than '0';;0;;;
-Have an end of life strategy for the website;1030;3;7. End of life;2. End of life;3. Technical;;Product Ower, product designer;The number websites with no end-of-life plan is lower or equal than '0';;0;;;
-;;373;;;;;;;;10;;;
+Avoid redirections;45;4;5. Utilization;1. Support;3. Technical;DNS;Software architect / developper;The number The number of redirects is equal to or less than is lower or equal than '1';;0;;;
+Disable binary logs;83;2;5. Utilization;1. Support;3. Technical;Servers;System administrator;The number of options --skip-log-bin and --disable-log-bin not activated in cases where binary logs are not useful is lower or equal than '0';;0;;;
+

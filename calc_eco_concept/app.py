@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
+import random
 from dash import Dash, html, dcc, Input, Output, State, ctx
 import plotly.express as px
 import os
 
-CSV_PATH = "Ecoconception.csv"
+CSV_PATH = "C:\\Users\\ambroise\\Documents\\GitHub\\draft_ambroise\\calc_eco_concept\\Ecoconception.csv"
 
 def load_data(csv_path):
     df = pd.read_csv(csv_path, sep=';')
@@ -42,28 +43,91 @@ def update_graph(n_clicks, selected_id):
         df = df[df["id"] != selected_id]
         df.to_csv(CSV_PATH, index=False)
 
-    # Prepare layout positions
-    if "x" not in df.columns:
-        sections = df["Section"].unique()
-        mapping = {sec: i for i, sec in enumerate(sections)}
-        df["x"] = df["Section"].map(mapping)
-        df["y"] = df.groupby("Section").cumcount() + np.random.uniform(-0.4, 0.4, len(df))
+    # Create y-axis positions based on Priority, Lifecycle, and Category
+    if "x" not in df.columns or "y" not in df.columns:
+        # Assign y positions based on Priority, Lifecycle, and Category
+        priority_levels = sorted(df["Priority"].unique(), reverse=False)  # Higher priority at the top
+        lifecycle_levels = {lifecycle: i for i, lifecycle in enumerate(sorted(df["Lifecycle"].unique()))}
+        category_levels = {category: i for i, category in enumerate(sorted(df["Category"].unique()))}
+        sections_levels = {section: i for i, section in enumerate(sorted(df["Section"].unique()))}
+       
+
+        y_positions = []
+        for _, row in df.iterrows():
+            # Calculate y position: Priority determines the main section, Lifecycle and Category refine it
+            priority_index = priority_levels.index(row["Priority"])
+            lifecycle_index = lifecycle_levels[row["Lifecycle"]]
+            category_index = category_levels[row["Category"]]
+
+            # Combine indices to create a unique y position
+            y = priority_index * 100 + lifecycle_index * 10 + category_index
+            y_positions.append(y)
+
+        # Assign x positions based on Section
+        section_order = {section: i for i, section in enumerate(sorted(df["Section"].unique()))}
+        df["x"] = df["Section"].map(section_order)  # Map sections to sequential x positions
+        df["y"] = y_positions
 
     # Create the scatter plot
+    df["size_adjusted"] = df["Priority"] * 1
     fig = px.scatter(
         df,
         x="x", y="y",
-        size="Priority",
+        size="size_adjusted",
+        size_max=15,
         color="Lifecycle",
         hover_name="Title",
-        hover_data=["Category", "ValidationRules"],
+        hover_data=["Category", "ValidationRules", "Section", "Priority"],
     )
-    fig.update_traces(marker=dict(opacity=0.8, line=dict(width=1, color='DarkSlateGrey')))
+
+    # Add shadow lines for Priority levels
+    for i, priority in enumerate(priority_levels):
+        y_start = i * 100
+        fig.add_shape(
+            type="line",
+            x0=0, x1=len(df["Section"].unique()),  # Full width of the plot
+            y0=y_start, y1=y_start,
+            line=dict(color="LightGray", width=1, dash="dot")  # Shadow line style
+        )
+
+    # Add shadow lines for Lifecycle within each Priority
+    for i, priority in enumerate(priority_levels):
+        for j in range(len(lifecycle_levels)):
+            y_start = i * 100 + j * 10
+            fig.add_shape(
+                type="line",
+                x0=0, x1=len(df["Section"].unique()),
+                y0=y_start, y1=y_start,
+                line=dict(color="Gainsboro", width=0.5, dash="dot")
+            )
+
+    # Add vertical lines for each Section
+    for i, section in enumerate(sorted(df["Section"].unique())):
+        fig.add_shape(
+            type="line",
+            x0=i, x1=i,
+            y0=0, y1=max(y_positions),
+            line=dict(color="LightGray", width=1, dash="dot")
+        )
+
+    # Update layout to show x-axis and y-axis labels
     fig.update_layout(
-        xaxis=dict(showticklabels=False, showgrid=False),
-        yaxis=dict(showticklabels=False, showgrid=False),
-        plot_bgcolor='white'
+        yaxis=dict(
+            title="Priority / Lifecycle / Category",
+            tickvals=[i * 100 for i in range(len(priority_levels))],
+            ticktext=[f"Priority {p}" for p in priority_levels],
+            showgrid=False,  # Disable default gridlines
+        ),
+        xaxis=dict(
+            title="Section",
+            tickvals=list(range(len(section_order))),
+            ticktext=list(section_order.keys()),  # Show section names as x-axis labels
+            showgrid=False,  # Disable default gridlines
+        ),
+        plot_bgcolor='white',
+        legend_title="Lifecycle",  # Add a clear legend title
     )
+
     return fig
 
 
@@ -85,6 +149,7 @@ def display_info(clickData):
                 html.P(f"Priority: {row['Priority']}"),
                 html.P(f"Lifecycle: {row['Lifecycle']}"),
                 html.P(f"Validation Rules: {row['ValidationRules']}"),
+                html.P(f"Section: {row['Section']}"),
             ]),
             int(row["id"])
         )
