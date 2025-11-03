@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import random
+import uuid                               # <--- added
 from dash import Dash, html, dcc, Input, Output, State, ctx
 import plotly.express as px
 import os
@@ -20,7 +21,13 @@ shutil.copy(CSV_COPY_PATH, CSV_TEMP_PATH)
 
 def load_data(csv_path):
     df = pd.read_csv(csv_path, sep=';')
-    df["id"] = df.index + 1  # Start the id from 1 (change to 0 if you prefer)
+    # Ensure a persistent unique id ('uid') exists and is saved back to the csv copy.
+    if "uid" not in df.columns:
+        # create stable unique identifiers and persist them to this file (only copies are updated)
+        df["uid"] = [str(uuid.uuid4()) for _ in range(len(df))]
+        df.to_csv(csv_path, index=False, sep=';')
+    # Keep a transient 'id' for row-number convenience (these will change when rows are deleted)
+    df["id"] = df.index + 1
     return df
 
 app = Dash(__name__)
@@ -66,7 +73,8 @@ def update_graph(delete_clicks, validate_clicks, reset_clicks, selected_id):
 
     # If delete button pressed, remove the selected item from the temporary copy
     if ctx.triggered_id == "delete-btn" and selected_id:
-        df = df[df["id"] != selected_id]
+        # selected_id is a uid (string); filter by uid
+        df = df[df["uid"] != selected_id]
         df.to_csv(CSV_TEMP_PATH, index=False, sep=';')
 
     # If validate button pressed, save the temporary copy to the first copy
@@ -118,13 +126,17 @@ def update_graph(delete_clicks, validate_clicks, reset_clicks, selected_id):
         size="size",
         size_max=5,
         color="Lifecycle",
-        hover_name="Title",
-        hover_data=["ValidationRules"],
+        custom_data=["uid", "Title", "ValidationRules"],  # use persistent uid
+        hover_data={"uid": False, "Title": False, "ValidationRules": True},
     )
+
+    # Customize the hover tooltip (use customdata indices)
     fig.update_traces(
-        customdata=df[["Title"]],  # Add Title and ValidationRules as custom data
-        hovertemplate=" %{customdata[0]}<br>" +  # Display Title
-                      "<extra></extra>"   # Remove the default trace info
+        hovertemplate="<b>Title:</b> %{customdata[1]}<br>" +
+                      "<b>Validation Rules:</b> %{customdata[2]}<br>" +
+                      "<extra></extra>",
+        text=df["Domain"],  # if you want text shown under points
+        textposition="bottom center"
     )
 
     # Add shadow lines for Priority levels
@@ -201,15 +213,21 @@ def update_graph(delete_clicks, validate_clicks, reset_clicks, selected_id):
 def display_info(clickData):
     if clickData:
         point = clickData["points"][0]
-        Title = point["hovertext"]
         df = load_data(CSV_TEMP_PATH)
 
-        # Filter the DataFrame for the selected Title
-        filtered_df = df[df["Title"] == Title]
-        
-        # Check if the filtered DataFrame is empty
+        # Prefer using customdata uid (most reliable).
+        custom = point.get("customdata")
+        if custom and len(custom) >= 1 and custom[0]:
+            selected_uid = custom[0]
+            filtered_df = df[df["uid"] == selected_uid]
+        else:
+            Title = point.get("hovertext") or point.get("text") or None
+            if Title is None:
+                return html.Div("No data found for the selected category."), None
+            filtered_df = df[df["Title"] == Title]
+
         if not filtered_df.empty:
-            row = filtered_df.iloc[0]  # Safely access the first row
+            row = filtered_df.iloc[0]
             return (
                 html.Div([
                     html.H3(row["Title"]),
@@ -219,7 +237,7 @@ def display_info(clickData):
                     html.P(f"Validation Rules: {row['ValidationRules']}"),
                     html.P(f"Section: {row['Section']}"),
                 ]),
-                int(row["id"])
+                row["uid"]  # store uid (string) in selected-id
             )
         else:
             return html.Div("No data found for the selected category."), None
