@@ -11,6 +11,7 @@ large_value = 300
 height_value = 108
 def load_data(csv_path):
     df = pd.read_csv(csv_path, sep=';')
+    df["id"] = df.index + 1  # Start the id from 1 (change to 0 if you prefer)
     return df
 
 app = Dash(__name__)
@@ -175,19 +176,19 @@ def update_graph(n_clicks, selected_id):
 def display_info(clickData):
     if clickData:
         point = clickData["points"][0]
-        Category = point["hovertext"]
+        Title = point["hovertext"]
         df = load_data(CSV_PATH)
-        
-        # Filter the DataFrame for the selected Category
-        filtered_df = df[df["Category"] == Category]
+
+        # Filter the DataFrame for the selected Title
+        filtered_df = df[df["Title"] == Title]
         
         # Check if the filtered DataFrame is empty
         if not filtered_df.empty:
             row = filtered_df.iloc[0]  # Safely access the first row
             return (
                 html.Div([
-                    html.H3(row["Category"]),
-                    html.P(f"Description: {row['Description']}"),
+                    html.H3(row["Title"]),
+                    html.H4(row["Category"]),
                     html.P(f"Priority: {row['Priority']}"),
                     html.P(f"Lifecycle: {row['Lifecycle']}"),
                     html.P(f"Validation Rules: {row['ValidationRules']}"),
