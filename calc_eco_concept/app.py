@@ -4,11 +4,20 @@ import random
 from dash import Dash, html, dcc, Input, Output, State, ctx
 import plotly.express as px
 import os
+import shutil
 
+# File paths
 CSV_PATH = "C:\\Users\\ambroise\\Documents\\GitHub\\draft_ambroise\\calc_eco_concept\\Ecoconception.csv"
+CSV_COPY_PATH = "C:\\Users\\ambroise\\Documents\\GitHub\\draft_ambroise\\calc_eco_concept\\Ecoconception_copy.csv"
+CSV_TEMP_PATH = "C:\\Users\\ambroise\\Documents\\GitHub\\draft_ambroise\\calc_eco_concept\\Ecoconception_temp.csv"
 
-large_value = 300
-height_value = 108
+# Create a copy of the original CSV file if the first copy doesn't exist
+if not os.path.exists(CSV_COPY_PATH):
+    shutil.copy(CSV_PATH, CSV_COPY_PATH)
+
+# Create a temporary copy for modifications
+shutil.copy(CSV_COPY_PATH, CSV_TEMP_PATH)
+
 def load_data(csv_path):
     df = pd.read_csv(csv_path, sep=';')
     df["id"] = df.index + 1  # Start the id from 1 (change to 0 if you prefer)
@@ -28,7 +37,13 @@ app.layout = html.Div([
 
     html.Button("Delete Selected Category", id="delete-btn", n_clicks=0, 
                 style={"marginTop": "1em", "backgroundColor": "#e74c3c", "color": "white"}),
-    
+
+    html.Button("Validate Changes", id="validate-btn", n_clicks=0, 
+                style={"marginTop": "1em", "backgroundColor": "#2ecc71", "color": "white"}),
+
+    html.Button("Reset Changes", id="reset-btn", n_clicks=0, 
+                style={"marginTop": "1em", "backgroundColor": "#3498db", "color": "white"}),
+
     dcc.Store(id="selected-id"), 
 ])
 
@@ -36,15 +51,27 @@ app.layout = html.Div([
 @app.callback(
     Output("eco-map", "figure"),
     Input("delete-btn", "n_clicks"),
+    Input("validate-btn", "n_clicks"),
+    Input("reset-btn", "n_clicks"),  # Add reset button input
     State("selected-id", "data")
 )
-def update_graph(n_clicks, selected_id):
-    df = load_data(CSV_PATH)
+def update_graph(delete_clicks, validate_clicks, reset_clicks, selected_id):
+    # If reset button is pressed, restore the temporary copy from the first copy
+    if ctx.triggered_id == "reset-btn":
+        shutil.copy(CSV_COPY_PATH, CSV_TEMP_PATH)  # Restore the temporary copy
+        df = load_data(CSV_TEMP_PATH)  # Reload the restored copy
+    else:
+        # Load the temporary copy of the CSV
+        df = load_data(CSV_TEMP_PATH)
 
-    # If delete button pressed, remove the selected item
+    # If delete button pressed, remove the selected item from the temporary copy
     if ctx.triggered_id == "delete-btn" and selected_id:
         df = df[df["id"] != selected_id]
-        df.to_csv(CSV_PATH, index=False)
+        df.to_csv(CSV_TEMP_PATH, index=False, sep=';')
+
+    # If validate button pressed, save the temporary copy to the first copy
+    if ctx.triggered_id == "validate-btn":
+        shutil.copy(CSV_TEMP_PATH, CSV_COPY_PATH)
 
     # Create y-axis positions based on Priority, Lifecycle, and Category
     if "x" not in df.columns or "y" not in df.columns:
@@ -92,15 +119,14 @@ def update_graph(n_clicks, selected_id):
         size_max=5,
         color="Lifecycle",
         hover_name="Title",
-        hover_data=[ "ValidationRules"],
-        #text="Domain"  # Add the Domain string as text below each point
+        hover_data=["ValidationRules"],
     )
     fig.update_traces(
-    customdata=df[["Title", "ValidationRules"]],  # Add Title and ValidationRules as custom data
-    hovertemplate="<b>Title:</b> %{customdata[0]}<br>" +  # Display Title
-                  "<b>Validation Rules:</b> %{customdata[1]}<br>" +  # Display ValidationRules
-                  "<extra></extra>"  # Remove the default trace info
-)
+        customdata=df[["Title", "ValidationRules"]],  # Add Title and ValidationRules as custom data
+        hovertemplate="<b>Title:</b> %{customdata[0]}<br>" +  # Display Title
+                      "<b>Validation Rules:</b> %{customdata[1]}<br>" +  # Display ValidationRules
+                      "<extra></extra>"  # Remove the default trace info
+    )
 
     # Add shadow lines for Priority levels
     for i, priority in enumerate(priority_levels):
@@ -123,7 +149,6 @@ def update_graph(n_clicks, selected_id):
                 line=dict(color="Gainsboro", width=0.5, dash="dot")
             )
             # Add category labels as a sub-legend
-             # Add the label only once per priority block
             fig.add_annotation(
                 x=-50,  # Place the label outside the plot area
                 y=y_start + 6,  # Center the label within the category block
@@ -171,13 +196,14 @@ def update_graph(n_clicks, selected_id):
 @app.callback(
     Output("info-panel", "children"),
     Output("selected-id", "data"),
+    Input("reset-btn", "n_clicks"),
     Input("eco-map", "clickData")
 )
 def display_info(clickData):
     if clickData:
         point = clickData["points"][0]
         Title = point["hovertext"]
-        df = load_data(CSV_PATH)
+        df = load_data(CSV_TEMP_PATH)
 
         # Filter the DataFrame for the selected Title
         filtered_df = df[df["Title"] == Title]
