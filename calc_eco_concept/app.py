@@ -122,10 +122,9 @@ def update_graph(delete_clicks, validate_clicks, reset_clicks, selected_id):
         hover_data=["ValidationRules"],
     )
     fig.update_traces(
-        customdata=df[["Title", "ValidationRules"]],  # Add Title and ValidationRules as custom data
-        hovertemplate="<b>Title:</b> %{customdata[0]}<br>" +  # Display Title
-                      "<b>Validation Rules:</b> %{customdata[1]}<br>" +  # Display ValidationRules
-                      "<extra></extra>"  # Remove the default trace info
+        customdata=df[["Title"]],  # Add Title and ValidationRules as custom data
+        hovertemplate=" %{customdata[0]}<br>" +  # Display Title
+                      "<extra></extra>"   # Remove the default trace info
     )
 
     # Add shadow lines for Priority levels
@@ -196,8 +195,8 @@ def update_graph(delete_clicks, validate_clicks, reset_clicks, selected_id):
 @app.callback(
     Output("info-panel", "children"),
     Output("selected-id", "data"),
-    Input("reset-btn", "n_clicks"),
-    Input("eco-map", "clickData")
+    Input("eco-map", "clickData"),
+    prevent_initial_call=True  # Prevent the callback from running on app load
 )
 def display_info(clickData):
     if clickData:
